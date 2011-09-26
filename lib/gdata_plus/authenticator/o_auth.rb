@@ -88,16 +88,29 @@ module GDataPlus
       end
 
       # Adds authorization header to the specified Typeoeus::Request. The same request is also returned.
-      def sign_request(request)
-        raise ArgumentError, "request must be a Typeoeus::Request" unless request.is_a? ::Typhoeus::Request
-
+      def sign_request!(request)
+        # This is a hack so I can use oauth authentication with the 
+        # fusion_tables/gdata gem. Decidedly NOT the right way to do this.  
+        original_request = nil
+        if !request.is_a? ::Typhoeus::Request
+          original_request = request
+          # Create a temporary request, just to get the authentication header
+          request = ::Typhoeus::Request.new(request.url)
+        end
+        
         helper = ::OAuth::Client::Helper.new(request, {
           :consumer => consumer,
           :request_uri => request.url,
           :token => access_token
         })
         request.headers.merge!({"Authorization" => helper.header})
-        request
+
+        if !original_request.nil?
+          original_request.headers = request.headers
+          return original_request
+        end
+        return request
+
       end
     end
   end
